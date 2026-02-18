@@ -1,0 +1,8 @@
+name = "curio-feeds-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-02-14"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "curio-feeds-db"
+database_id = "65b46778-6c64-4b11-900f-d7bca837ca05"

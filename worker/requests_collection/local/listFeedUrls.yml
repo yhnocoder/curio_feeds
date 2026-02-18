@@ -1,0 +1,23 @@
+info:
+  name: listFeedUrls
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: http://localhost:8787/rpc
+  body:
+    type: json
+    data: |-
+      {
+        "action": "listFeedUrls"
+      }
+  auth:
+    type: bearer
+    token: dev-test-token
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

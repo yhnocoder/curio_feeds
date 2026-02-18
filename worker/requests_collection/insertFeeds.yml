@@ -1,0 +1,23 @@
+info:
+  name: insertFeeds
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: https://curio-feeds-proxy.qq838267385.workers.dev/rpc
+  body:
+    type: json
+    data: |-
+      {
+        "action": "listFeedUrls"
+      }
+  auth:
+    type: bearer
+    token: prISv343Hx07MsjpuShfUvfBCLJfQ8lVT1449z1g
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
