@@ -12,8 +12,9 @@ CurioFeeds 是一个AI Driven 的 RSS 订阅聚合系统，由自托管的 Node.
 # 后端
 cd backend && npm install
 npm run build          # tsc 编译
-npm start              # 运行 dist/index.js
+npm start              # 运行 dist/index.js（含 HTTP API + Cron 调度）
 npm run dev            # watch 模式开发
+npm run seed           # 从 feeds.json 初始化 DB 种子数据
 
 # Worker
 cd worker && npm install
@@ -28,42 +29,52 @@ npm run deploy         # 部署到 Cloudflare
 ```
 Self-Hosted Backend (Node.js/TS)          Cloudflare Edge
 ┌────────────────────────────┐    HTTP    ┌────────────────┐
-│ Cron调度 → RSS抓取/解析    │───Bearer──▶│ RPC Worker     │
-│ XML备份 → R2上传           │    Auth    │ POST /rpc      │
-│ 过期清理                   │───S3 API──▶│ 10个命名操作   │
-└────────────────────────────┘            │   ↓            │
-                                          │ D1 + R2        │
+│ HTTP API (Hono)            │───Bearer──▶│ RPC Worker     │
+│ Cron调度 → RSS抓取/解析    │    Auth    │ POST /rpc      │
+│ XML备份 → R2上传           │───S3 API──▶│ 17个命名操作   │
+│ 过期清理 + 软删除清理      │            │   ↓            │
+└────────────────────────────┘            │ D1 + R2        │
                                           └────────────────┘
 ```
 
 - **后端与 D1 的所有交互**都通过 Worker 的 typed RPC 端点（`POST /rpc`，body 为 `{ action, params }`），Worker 不暴露原始 SQL
 - R2 存储通过 S3 兼容 API 直连（仅用于 XML 备份）
-- `feeds.json` 是订阅源的唯一真实来源（source of truth），启动时与 DB 做 diff 同步
+- DB 是 feed 配置的唯一来源，运行时通过 HTTP API 管理 feed/group
+- `feeds.json` 仅用于 DB 初始化种子数据（`npm run seed`）
 
 ## 关键设计原则
 
 - **数据不可变**：`content_html` 入库后不修改
 - **幂等安全**：条件请求 (ETag/Last-Modified) + `INSERT OR IGNORE` 保证重复执行安全
 
+## Feed 管理
+
+- Feed CRUD 通过 Backend HTTP API（Hono，Bearer token 认证）
+- Feed 删除为软删除（设置 `deleted_at`），已删除 feed 不再被调度
+- FeedGroup 支持多对多关系，为 AI 去重/重组奠基
+- 物理清理在定时 cleanup 中执行
+
 ## 定时任务
 
 | 周期 | 任务 |
 |------|------|
 | 每 60 分钟 | 检查到期 feeds 并抓取 |
-| 每天 3:00 | 清理过期条目（默认 180 天） |
+| 每天 3:00 | 清理过期条目（默认 180 天）+ 物理删除已标记的 feed |
 
 ## 代码结构
 
-- `backend/` — 自托管 Node.js 后端，`src/` 下按职责划分：db、r2、feeds、parser、backup、cleanup、utils
+- `backend/` — 自托管 Node.js 后端，`src/` 下按职责划分：api、db、feeds、parser、backup、cleanup、utils
+  - `api/server.ts` — Hono HTTP server，Feed/Group CRUD 路由
   - `db/rpc.ts` — 类型安全的 RPC client，每个方法对应 Worker 的一个 action
+  - `scripts/seed.ts` — DB 初始化种子脚本，从 feeds.json 导入
 - `worker/` — Cloudflare RPC Worker，D1 的认证代理
   - `src/schema.ts` — D1 表结构定义（首次请求自动 migrate）
-  - `src/handlers/` — 按领域划分的 RPC handler（feeds、items、cleanup）
+  - `src/handlers/` — 按领域划分的 RPC handler（feeds、items、cleanup、groups）
 - `design/` — 技术设计文档
 
 ## 数据库
 
-两张表：`feeds`、`items`（UNIQUE(feed_id, guid)）。Schema 定义在 `worker/src/schema.ts`。
+四张表：`feeds`（含软删除）、`items`（UNIQUE(feed_id, guid)）、`feed_groups`、`feed_group_members`（多对多）。Schema 定义在 `worker/src/schema.ts`。
 
 ## 核心处理流程
 

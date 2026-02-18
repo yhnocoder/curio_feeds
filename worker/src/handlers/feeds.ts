@@ -1,18 +1,29 @@
-export async function listFeedUrls(db: D1Database): Promise<string[]> {
-  const result = await db.prepare("SELECT url FROM feeds").all<{ url: string }>();
-  return result.results.map((r) => r.url);
+// -- Feed 查询/状态更新 --
+
+export async function addFeed(
+  db: D1Database,
+  params: { id: string; url: string; intervalMinutes: number | null; nextFetchAt: string; createdAt: string }
+): Promise<Record<string, unknown>> {
+  await db.prepare(
+    `INSERT INTO feeds (id, url, interval_minutes, next_fetch_at, created_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).bind(params.id, params.url, params.intervalMinutes, params.nextFetchAt, params.createdAt).run();
+
+  const row = await db.prepare("SELECT * FROM feeds WHERE id = ?").bind(params.id).first();
+  return row as Record<string, unknown>;
 }
 
-export async function insertFeeds(
+export async function softDeleteFeed(
   db: D1Database,
-  params: { feeds: { id: string; url: string; nextFetchAt: string; createdAt: string }[] }
+  params: { id: string; now: string }
 ): Promise<void> {
-  if (params.feeds.length === 0) return;
-  const stmts = params.feeds.map((f) =>
-    db.prepare("INSERT INTO feeds (id, url, next_fetch_at, created_at) VALUES (?, ?, ?, ?)")
-      .bind(f.id, f.url, f.nextFetchAt, f.createdAt)
-  );
-  await db.batch(stmts);
+  await db.prepare("UPDATE feeds SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL")
+    .bind(params.now, params.id).run();
+}
+
+export async function listFeeds(db: D1Database): Promise<Record<string, unknown>[]> {
+  const result = await db.prepare("SELECT * FROM feeds WHERE deleted_at IS NULL").all();
+  return result.results;
 }
 
 export async function getDueFeeds(
@@ -22,7 +33,7 @@ export async function getDueFeeds(
   const result = await db.prepare(
     `SELECT id, url, last_etag, last_modified, consecutive_failures
      FROM feeds
-     WHERE next_fetch_at <= ? OR next_fetch_at IS NULL`
+     WHERE deleted_at IS NULL AND (next_fetch_at <= ? OR next_fetch_at IS NULL)`
   ).bind(params.now).all();
   return result.results;
 }

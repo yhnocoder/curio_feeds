@@ -2,6 +2,7 @@ import { SCHEMA_SQL } from "./schema.js";
 import * as feeds from "./handlers/feeds.js";
 import * as items from "./handlers/items.js";
 import * as cleanup from "./handlers/cleanup.js";
+import * as groups from "./handlers/groups.js";
 
 export interface Env {
   DB: D1Database;
@@ -12,8 +13,9 @@ export interface Env {
 // 每个 handler 签名: (db, params) => Promise<unknown>
 const handlers: Record<string, (db: D1Database, params: any) => Promise<unknown>> = {
   // feeds
-  listFeedUrls: (db) => feeds.listFeedUrls(db),
-  insertFeeds: (db, p) => feeds.insertFeeds(db, p),
+  addFeed: (db, p) => feeds.addFeed(db, p),
+  softDeleteFeed: (db, p) => feeds.softDeleteFeed(db, p),
+  listFeeds: (db) => feeds.listFeeds(db),
   getDueFeeds: (db, p) => feeds.getDueFeeds(db, p),
   markFeedNotModified: (db, p) => feeds.markFeedNotModified(db, p),
   markFeedSuccess: (db, p) => feeds.markFeedSuccess(db, p),
@@ -24,6 +26,13 @@ const handlers: Record<string, (db: D1Database, params: any) => Promise<unknown>
   getExpiredItemIds: (db, p) => items.getExpiredItemIds(db, p),
   // cleanup
   deleteExpiredRecords: (db, p) => cleanup.deleteExpiredRecords(db, p),
+  deleteMarkedFeeds: (db) => cleanup.deleteMarkedFeeds(db),
+  // groups
+  createGroup: (db, p) => groups.createGroup(db, p),
+  deleteGroup: (db, p) => groups.deleteGroup(db, p),
+  listGroups: (db) => groups.listGroups(db),
+  addFeedToGroup: (db, p) => groups.addFeedToGroup(db, p),
+  removeFeedFromGroup: (db, p) => groups.removeFeedFromGroup(db, p),
 };
 
 let migrated = false;

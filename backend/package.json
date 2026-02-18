@@ -7,13 +7,16 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch & node --watch dist/index.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
+    "@hono/node-server": "^1.19.9",
     "@rowanmanning/feed-parser": "^2.1.1",
     "cheerio": "^1.0.0",
     "dotenv": "^17.0.0",
+    "hono": "^4.11.10",
     "iconv-lite": "^0.7.0",
     "jschardet": "^3.1.4",
     "node-cron": "^4.0.0",
@@ -21,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.4",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.3",
     "vitest": "^3.0.0"
   }

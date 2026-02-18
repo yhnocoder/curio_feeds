@@ -36,13 +36,14 @@ function expectRpcCall(action: string, params?: Record<string, unknown>) {
 }
 
 describe("rpc client", () => {
-  it("sends correct action and params for listFeedUrls", async () => {
-    mockRpcResponse(["https://a.com/rss", "https://b.com/rss"]);
+  it("sends correct action for listFeeds", async () => {
+    const feeds = [{ id: "f1", url: "https://a.com/rss" }];
+    mockRpcResponse(feeds);
 
-    const result = await rpc.listFeedUrls();
+    const result = await rpc.listFeeds();
 
-    expectRpcCall("listFeedUrls", undefined);
-    expect(result).toEqual(["https://a.com/rss", "https://b.com/rss"]);
+    expectRpcCall("listFeeds", undefined);
+    expect(result).toEqual(feeds);
   });
 
   it("sends correct action and params for getDueFeeds", async () => {
@@ -80,7 +81,7 @@ describe("rpc client", () => {
       new Response('{"error":"Unauthorized"}', { status: 401 })
     );
 
-    await expect(rpc.listFeedUrls()).rejects.toThrow("RPC listFeedUrls failed (401)");
+    await expect(rpc.listFeeds()).rejects.toThrow("RPC listFeeds failed (401)");
   });
 
   it("unwraps data field from response", async () => {

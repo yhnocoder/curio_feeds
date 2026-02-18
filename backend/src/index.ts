@@ -1,13 +1,13 @@
 import { schedule } from "node-cron";
 import { config } from "./config.js";
-import { syncFeeds } from "./feeds/sync.js";
 import { runScheduledFeeds } from "./feeds/scheduler.js";
 import { cleanupExpiredItems } from "./cleanup/lifecycle.js";
+import { startApiServer } from "./api/server.js";
+import { rpc } from "./db/rpc.js";
 import { logger } from "./utils/logger.js";
 
 async function feedCycle(): Promise<void> {
   try {
-    await syncFeeds();
     await runScheduledFeeds();
   } catch (err) {
     logger.error("Feed cycle failed", {
@@ -19,6 +19,10 @@ async function feedCycle(): Promise<void> {
 async function cleanupCycle(): Promise<void> {
   try {
     await cleanupExpiredItems();
+    const deleted = await rpc.deleteMarkedFeeds();
+    if (deleted > 0) {
+      logger.info("Cleaned up soft-deleted feeds", { count: deleted });
+    }
   } catch (err) {
     logger.error("Cleanup cycle failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -31,7 +35,11 @@ async function main(): Promise<void> {
     fetchInterval: config.schedule.defaultIntervalMinutes,
     maxConcurrent: config.schedule.maxConcurrentFeeds,
     retentionDays: config.retention.itemDays,
+    apiPort: config.api.port,
   });
+
+  // 启动 HTTP API server
+  startApiServer();
 
   // 立即执行首次 feed cycle
   await feedCycle();
