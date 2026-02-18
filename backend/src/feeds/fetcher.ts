@@ -4,7 +4,6 @@ import { logger } from "../utils/logger.js";
 import { backupXml } from "../backup/xml.js";
 import { detectAndConvert } from "../parser/encoding.js";
 import { parseRss } from "../parser/rss.js";
-import { processImages } from "../images/processor.js";
 
 function computeNextFetchAt(failures: number): string {
   if (failures === 0) {
@@ -112,19 +111,6 @@ export async function processFeed(feed: FeedRow): Promise<void> {
       feedId: feed.id,
       count: parsed.items.length,
     });
-
-    // 处理每个新条目的图片
-    for (const item of parsed.items) {
-      try {
-        await processImages(item.id, item.contentHtml, feed.id, item.guid);
-      } catch (err) {
-        logger.error("Image processing failed", {
-          feedId: feed.id,
-          itemId: item.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    }
   }
 
   logger.info("Feed processed successfully", {
