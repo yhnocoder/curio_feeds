@@ -1,7 +1,6 @@
 import { SCHEMA_SQL } from "./schema.js";
 import * as feeds from "./handlers/feeds.js";
 import * as items from "./handlers/items.js";
-import * as images from "./handlers/images.js";
 import * as cleanup from "./handlers/cleanup.js";
 
 export interface Env {
@@ -23,14 +22,7 @@ const handlers: Record<string, (db: D1Database, params: any) => Promise<unknown>
   insertItems: (db, p) => items.insertItems(db, p),
   getItemFeedInfo: (db, p) => items.getItemFeedInfo(db, p),
   getExpiredItemIds: (db, p) => items.getExpiredItemIds(db, p),
-  // images
-  insertImageTasks: (db, p) => images.insertImageTasks(db, p),
-  markImageSuccess: (db, p) => images.markImageSuccess(db, p),
-  markImageFailure: (db, p) => images.markImageFailure(db, p),
-  getPendingImageRetries: (db, p) => images.getPendingImageRetries(db, p),
-  getImageTaskUrls: (db, p) => images.getImageTaskUrls(db, p),
   // cleanup
-  getImageR2Keys: (db, p) => cleanup.getImageR2Keys(db, p),
   deleteExpiredRecords: (db, p) => cleanup.deleteExpiredRecords(db, p),
 };
 

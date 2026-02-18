@@ -56,11 +56,6 @@ vi.mock("../parser/rss.js", () => ({
   }),
 }));
 
-// Mock processImages
-vi.mock("../images/processor.js", () => ({
-  processImages: vi.fn().mockResolvedValue(undefined),
-}));
-
 import { processFeed } from "./fetcher.js";
 
 const baseFeed = {
@@ -90,7 +85,7 @@ describe("processFeed", () => {
     );
   });
 
-  it("processes 200 response: parse, insert items, process images", async () => {
+  it("processes 200 response: parse and insert items", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response("<rss>data</rss>", {
         status: 200,
@@ -119,10 +114,6 @@ describe("processFeed", () => {
         expect.objectContaining({ id: "item-1", feedId: "feed-1", guid: "guid-1" }),
       ])
     );
-
-    // 应处理图片
-    const { processImages } = await import("../images/processor.js");
-    expect(processImages).toHaveBeenCalledWith("item-1", "<p>Hello</p>", "feed-1", "guid-1");
   });
 
   it("handles HTTP error by incrementing failures", async () => {
@@ -186,7 +177,7 @@ describe("processFeed", () => {
     expect(calledHeaders["If-Modified-Since"]).toBe("Mon, 01 Jan 2024 00:00:00 GMT");
   });
 
-  it("skips image processing when no items", async () => {
+  it("skips insert when no items", async () => {
     const { parseRss } = await import("../parser/rss.js");
     vi.mocked(parseRss).mockReturnValueOnce({
       feedTitle: "Empty",
@@ -201,8 +192,6 @@ describe("processFeed", () => {
     await processFeed(baseFeed);
 
     expect(mockRpc.insertItems).not.toHaveBeenCalled();
-    const { processImages } = await import("../images/processor.js");
-    expect(processImages).not.toHaveBeenCalled();
   });
 });
 

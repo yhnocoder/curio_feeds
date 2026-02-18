@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-CurioFeeds 是一个AI Driven 的 RSS 订阅聚合系统，由自托管的 Node.js 后端 + Cloudflare Worker 代理组成。后端负责定时抓取、解析 RSS、图片归档和数据生命周期管理；Worker 作为 D1 数据库的认证代理。
+CurioFeeds 是一个AI Driven 的 RSS 订阅聚合系统，由自托管的 Node.js 后端 + Cloudflare Worker 代理组成。后端负责定时抓取、解析 RSS、XML 备份和数据生命周期管理；Worker 作为 D1 数据库的认证代理。
 
 ## 构建与运行
 
@@ -29,47 +29,45 @@ npm run deploy         # 部署到 Cloudflare
 Self-Hosted Backend (Node.js/TS)          Cloudflare Edge
 ┌────────────────────────────┐    HTTP    ┌────────────────┐
 │ Cron调度 → RSS抓取/解析    │───Bearer──▶│ RPC Worker     │
-│ 图片下载 → R2上传          │    Auth    │ POST /rpc      │
-│ XML备份 → R2上传           │───S3 API──▶│ 16个命名操作   │
-│ 过期清理                   │            │   ↓            │
-└────────────────────────────┘            │ D1 + R2        │
+│ XML备份 → R2上传           │    Auth    │ POST /rpc      │
+│ 过期清理                   │───S3 API──▶│ 10个命名操作   │
+└────────────────────────────┘            │   ↓            │
+                                          │ D1 + R2        │
                                           └────────────────┘
 ```
 
 - **后端与 D1 的所有交互**都通过 Worker 的 typed RPC 端点（`POST /rpc`，body 为 `{ action, params }`），Worker 不暴露原始 SQL
-- R2 存储通过 S3 兼容 API 直连
+- R2 存储通过 S3 兼容 API 直连（仅用于 XML 备份）
 - `feeds.json` 是订阅源的唯一真实来源（source of truth），启动时与 DB 做 diff 同步
 
 ## 关键设计原则
 
-- **数据不可变**：`content_html` 入库后不修改，图片 URL 替换在读取时动态进行
+- **数据不可变**：`content_html` 入库后不修改
 - **幂等安全**：条件请求 (ETag/Last-Modified) + `INSERT OR IGNORE` 保证重复执行安全
-- **级联清理**：先删 R2 对象（允许孤儿），再原子删除 D1 记录（无悬挂引用）
 
 ## 定时任务
 
 | 周期 | 任务 |
 |------|------|
 | 每 60 分钟 | 检查到期 feeds 并抓取 |
-| 每 120 分钟 | 重试失败的图片下载（最多 3 次） |
 | 每天 3:00 | 清理过期条目（默认 180 天） |
 
 ## 代码结构
 
-- `backend/` — 自托管 Node.js 后端，`src/` 下按职责划分：db、r2、feeds、parser、images、backup、cleanup、utils
+- `backend/` — 自托管 Node.js 后端，`src/` 下按职责划分：db、r2、feeds、parser、backup、cleanup、utils
   - `db/rpc.ts` — 类型安全的 RPC client，每个方法对应 Worker 的一个 action
 - `worker/` — Cloudflare RPC Worker，D1 的认证代理
   - `src/schema.ts` — D1 表结构定义（首次请求自动 migrate）
-  - `src/handlers/` — 按领域划分的 RPC handler（feeds、items、images、cleanup）
+  - `src/handlers/` — 按领域划分的 RPC handler（feeds、items、cleanup）
 - `design/` — 技术设计文档
 
 ## 数据库
 
-三张表：`feeds`、`items`（UNIQUE(feed_id, guid)）、`image_tasks`。Schema 定义在 `worker/src/schema.ts`。
+两张表：`feeds`、`items`（UNIQUE(feed_id, guid)）。Schema 定义在 `worker/src/schema.ts`。
 
 ## 核心处理流程
 
-条件 HTTP 请求 → 304 跳过 / 200 继续 → 备份原始 XML → 检测编码转 UTF-8 → 解析 RSS → 批量插入条目 → 异步处理图片 → 成功重置失败计数 / 失败指数退避（30m→24h 封顶）
+条件 HTTP 请求 → 304 跳过 / 200 继续 → 备份原始 XML → 检测编码转 UTF-8 → 解析 RSS → 批量插入条目 → 成功重置失败计数 / 失败指数退避（30m→24h 封顶）
 
 ## 编码检测优先级
 

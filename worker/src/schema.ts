@@ -25,21 +25,6 @@ CREATE TABLE IF NOT EXISTS items (
   FOREIGN KEY (feed_id) REFERENCES feeds(id)
 );
 
-CREATE TABLE IF NOT EXISTS image_tasks (
-  id TEXT PRIMARY KEY,
-  item_id TEXT NOT NULL,
-  original_url TEXT NOT NULL,
-  r2_key TEXT,
-  status TEXT NOT NULL DEFAULT 'pending',
-  attempts INTEGER DEFAULT 0,
-  last_error TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  FOREIGN KEY (item_id) REFERENCES items(id)
-);
-
 CREATE INDEX IF NOT EXISTS idx_items_feed_id ON items(feed_id);
 CREATE INDEX IF NOT EXISTS idx_items_created_at ON items(created_at);
-CREATE INDEX IF NOT EXISTS idx_image_tasks_item_id ON image_tasks(item_id);
-CREATE INDEX IF NOT EXISTS idx_image_tasks_status ON image_tasks(status, attempts);
 `;

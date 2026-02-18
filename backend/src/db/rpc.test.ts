@@ -84,11 +84,11 @@ describe("rpc client", () => {
   });
 
   it("unwraps data field from response", async () => {
-    mockRpcResponse(["key1", "key2"]);
+    mockRpcResponse(["item-1"]);
 
-    const result = await rpc.getImageR2Keys(["item-1"]);
+    const result = await rpc.getExpiredItemIds(180);
 
-    expectRpcCall("getImageR2Keys", { itemIds: ["item-1"] });
-    expect(result).toEqual(["key1", "key2"]);
+    expectRpcCall("getExpiredItemIds", { retentionDays: 180 });
+    expect(result).toEqual(["item-1"]);
   });
 });

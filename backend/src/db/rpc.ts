@@ -10,17 +10,6 @@ export interface FeedRow {
   consecutive_failures: number;
 }
 
-export interface ItemFeedInfo {
-  feed_id: string;
-  guid: string;
-}
-
-export interface PendingImageRetry {
-  id: string;
-  item_id: string;
-  original_url: string;
-}
-
 // -- RPC 请求 --
 
 async function request<T>(action: string, params?: Record<string, unknown>): Promise<T> {
@@ -84,47 +73,11 @@ async function insertItems(
   await request<void>("insertItems", { items });
 }
 
-async function getItemFeedInfo(itemId: string): Promise<ItemFeedInfo | null> {
-  return request<ItemFeedInfo | null>("getItemFeedInfo", { itemId });
-}
-
 async function getExpiredItemIds(retentionDays: number): Promise<string[]> {
   return request<string[]>("getExpiredItemIds", { retentionDays });
 }
 
-// -- Images --
-
-async function insertImageTasks(
-  tasks: { id: string; itemId: string; originalUrl: string; createdAt: string }[]
-): Promise<void> {
-  await request<void>("insertImageTasks", { tasks });
-}
-
-async function markImageSuccess(
-  itemId: string, originalUrl: string, r2Key: string, now: string
-): Promise<void> {
-  await request<void>("markImageSuccess", { itemId, originalUrl, r2Key, now });
-}
-
-async function markImageFailure(
-  itemId: string, originalUrl: string, error: string, now: string, maxAttempts: number
-): Promise<void> {
-  await request<void>("markImageFailure", { itemId, originalUrl, error, now, maxAttempts });
-}
-
-async function getPendingImageRetries(maxAttempts: number): Promise<PendingImageRetry[]> {
-  return request<PendingImageRetry[]>("getPendingImageRetries", { maxAttempts });
-}
-
-async function getImageTaskUrls(itemId: string): Promise<{ original_url: string }[]> {
-  return request<{ original_url: string }[]>("getImageTaskUrls", { itemId });
-}
-
 // -- Cleanup --
-
-async function getImageR2Keys(itemIds: string[]): Promise<string[]> {
-  return request<string[]>("getImageR2Keys", { itemIds });
-}
 
 async function deleteExpiredRecords(itemIds: string[]): Promise<void> {
   await request<void>("deleteExpiredRecords", { itemIds });
@@ -138,13 +91,6 @@ export const rpc = {
   markFeedSuccess,
   markFeedFailure,
   insertItems,
-  getItemFeedInfo,
   getExpiredItemIds,
-  insertImageTasks,
-  markImageSuccess,
-  markImageFailure,
-  getPendingImageRetries,
-  getImageTaskUrls,
-  getImageR2Keys,
   deleteExpiredRecords,
 };
