@@ -5,9 +5,22 @@ import { config } from "../config.js";
 export interface FeedRow {
   id: string;
   url: string;
+  title: string | null;
+  interval_minutes: number | null;
   last_etag: string | null;
   last_modified: string | null;
+  last_fetched_at: string | null;
   consecutive_failures: number;
+  next_fetch_at: string | null;
+  deleted_at: string | null;
+  created_at: string;
+}
+
+export interface GroupRow {
+  id: string;
+  name: string;
+  created_at: string;
+  feed_ids: string[];
 }
 
 // -- RPC 请求 --
@@ -33,14 +46,18 @@ async function request<T>(action: string, params?: Record<string, unknown>): Pro
 
 // -- Feeds --
 
-async function listFeedUrls(): Promise<string[]> {
-  return request<string[]>("listFeedUrls");
+async function addFeed(
+  id: string, url: string, intervalMinutes: number | null, nextFetchAt: string, createdAt: string
+): Promise<FeedRow> {
+  return request<FeedRow>("addFeed", { id, url, intervalMinutes, nextFetchAt, createdAt });
 }
 
-async function insertFeeds(
-  feeds: { id: string; url: string; nextFetchAt: string; createdAt: string }[]
-): Promise<void> {
-  await request<void>("insertFeeds", { feeds });
+async function softDeleteFeed(id: string, now: string): Promise<void> {
+  await request<void>("softDeleteFeed", { id, now });
+}
+
+async function listFeeds(): Promise<FeedRow[]> {
+  return request<FeedRow[]>("listFeeds");
 }
 
 async function getDueFeeds(now: string): Promise<FeedRow[]> {
@@ -83,9 +100,36 @@ async function deleteExpiredRecords(itemIds: string[]): Promise<void> {
   await request<void>("deleteExpiredRecords", { itemIds });
 }
 
+async function deleteMarkedFeeds(): Promise<number> {
+  return request<number>("deleteMarkedFeeds");
+}
+
+// -- Groups --
+
+async function createGroup(id: string, name: string, createdAt: string): Promise<GroupRow> {
+  return request<GroupRow>("createGroup", { id, name, createdAt });
+}
+
+async function deleteGroup(id: string): Promise<void> {
+  await request<void>("deleteGroup", { id });
+}
+
+async function listGroups(): Promise<GroupRow[]> {
+  return request<GroupRow[]>("listGroups");
+}
+
+async function addFeedToGroup(groupId: string, feedId: string, createdAt: string): Promise<void> {
+  await request<void>("addFeedToGroup", { groupId, feedId, createdAt });
+}
+
+async function removeFeedFromGroup(groupId: string, feedId: string): Promise<void> {
+  await request<void>("removeFeedFromGroup", { groupId, feedId });
+}
+
 export const rpc = {
-  listFeedUrls,
-  insertFeeds,
+  addFeed,
+  softDeleteFeed,
+  listFeeds,
   getDueFeeds,
   markFeedNotModified,
   markFeedSuccess,
@@ -93,4 +137,10 @@ export const rpc = {
   insertItems,
   getExpiredItemIds,
   deleteExpiredRecords,
+  deleteMarkedFeeds,
+  createGroup,
+  deleteGroup,
+  listGroups,
+  addFeedToGroup,
+  removeFeedFromGroup,
 };

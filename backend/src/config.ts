@@ -17,6 +17,9 @@ export const config = {
     secretAccessKey: required("R2_SECRET_ACCESS_KEY"),
     bucketName: required("R2_BUCKET_NAME"),
   },
+  api: {
+    port: parseInt(process.env.API_PORT || "3000", 10),
+  },
   retention: {
     itemDays: parseInt(process.env.ITEM_RETENTION_DAYS || "180", 10),
   },

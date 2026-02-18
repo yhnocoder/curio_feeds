@@ -1,6 +1,10 @@
 [
   {
-    "url": "https://hnrss.org/frontpage",
+    "url": "https://wechat2rss.bestblogs.dev/feed/1e0ac39f8952b2e7f0807313cf2633d25078a171.xml",
+    "intervalMinutes": 30
+  },
+  {
+    "url": "https://wechat2rss.xlab.app/feed/51e92aad2728acdd1fda7314be32b16639353001.xml",
     "intervalMinutes": 30
   }
 ]

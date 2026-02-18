@@ -10,7 +10,7 @@ http:
     type: json
     data: |-
       {
-        "action": "listFeedUrls"
+        "action": "listFeeds"
       }
   auth:
     type: bearer

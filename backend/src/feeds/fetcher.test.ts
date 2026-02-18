@@ -61,9 +61,15 @@ import { processFeed } from "./fetcher.js";
 const baseFeed = {
   id: "feed-1",
   url: "https://example.com/rss.xml",
+  title: null,
+  interval_minutes: null,
   last_etag: null,
   last_modified: null,
+  last_fetched_at: null,
   consecutive_failures: 0,
+  next_fetch_at: null,
+  deleted_at: null,
+  created_at: "2024-01-01T00:00:00Z",
 };
 
 beforeEach(() => {
